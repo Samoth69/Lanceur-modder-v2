@@ -1,5 +1,4 @@
-﻿using CmlLib.Core;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
@@ -57,57 +56,11 @@ namespace Lanceur_Modder_v2
 
         private void Refresh_Button_Click(object sender, RoutedEventArgs rea)
         {
-            var login = new MLogin();
-            //var session = login.TryAutoLogin();
-            //if (session.Result != MLoginResult.Success) // failed to auto login
-            //{
-            var email = "****";
-            var pw = "****";
-            var session = login.Authenticate(email, pw);
-
-            if (session.Result != MLoginResult.Success)
-                throw new Exception(session.Result.ToString()); // failed to login
-            //}
-
-            MessageBox.Show("login info:\n" + session.Username + "\n" + session.Message);
-
-            var path = new Minecraft(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + "\\Minecraft\\");
-            //var path = Minecraft.GetOSDefaultPath(); // mc directory
-
-            var launcher = new CmlLib.CMLauncher(path);
-            launcher.ProgressChanged += (s, e) =>
+            MinecraftLoginWindow MLW = new MinecraftLoginWindow();
+            if (MLW.ShowDialog() == true)
             {
-                Console.Write("{0}% ", e.ProgressPercentage);
-            };
-            launcher.FileChanged += (e) =>
-            {
-                Console.WriteLine("[{0}] {1} - {2}/{3}", e.FileKind.ToString(), e.FileName, e.ProgressedFileCount, e.TotalFileCount);
-            };
-
-            launcher.UpdateProfiles();
-            foreach (var item in launcher.Profiles)
-            {
-                Console.WriteLine(item.Name);
+                MessageBox.Show("yes");
             }
-
-            var launchOption = new MLaunchOption
-            {
-                MaximumRamMb = 1024,
-                Session = session, // Login Session. ex) Session = MSession.GetOfflineSession("hello")
-
-                //LauncherName = "MyLauncher",
-                //ScreenWidth = 1600,
-                //ScreenHeigth = 900,
-                //ServerIp = "mc.hypixel.net"
-            };
-
-            // launch forge
-            var process = launcher.CreateProcess("1.12.2", launchOption);
-
-            // launch vanila
-            //var process = launcher.Launch("1.15.2", launchOption);
-
-            process.Start();
         }
     }
 }

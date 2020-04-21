@@ -1,11 +1,10 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
+using System.ComponentModel;
+using CmlLib.Launcher;
 
 namespace Lanceur_Modder_v2
 {
@@ -13,7 +12,8 @@ namespace Lanceur_Modder_v2
 
     public abstract class InstallationModule
     {
-        public abstract string description { get; }
+        protected abstract MinecraftInstance parent { get; }
+        protected abstract string description { get; }
         public delegate void ProgressEventHandler(object o, ProgressEventArgs pa);
         public event ProgressEventHandler OnProgressUpdateEventHandler;
         public abstract void DoWork(string instancePath);
@@ -27,62 +27,99 @@ namespace Lanceur_Modder_v2
     public class ProgressEventArgs : EventArgs
     {
         private string title;
-        private double progress;
+        private string description;
+        private string moduleDescription;
+        private int progress;
+        private int max;
         public ProgressEventArgs()
         {
             title = "null";
-            progress = 0.0;
+            progress = 0;
+            Max = 0;
         }
-        public ProgressEventArgs(string title, double progress)
+        public ProgressEventArgs(string title, int progress)
         {
             this.title = title;
             this.progress = progress;
+            this.max = 100;
+        }
+
+        public ProgressEventArgs(string title, int progress, int max)
+        {
+            this.title = title;
+            this.progress = progress;
+            this.max = max;
         }
 
         public string Title { get => title; set => title = value; }
-        public double Progress { get => progress; set => progress = value; }
+        public int Progress { get => progress; set => progress = value; }
+        public int Max { get => max; set => max = value; }
+        public string Description { get => description; set => description = value; }
+        public string ModuleDescription { get => moduleDescription; set => moduleDescription = value; }
     }
 
     public class DownloadModule : InstallationModule
     {
+        private MinecraftInstance _parent;
+        protected override MinecraftInstance parent => _parent;
         private string _description;
         private List<DownloadPath> _installProcedure = new List<DownloadPath>();
         private ProgressEventArgs pea = new ProgressEventArgs();
-        //private BackgroundWorker bgw = new BackgroundWorker();
-        public DownloadModule(string description, JArray installProcedure)
+        private double oldMByteReceived = 0;
+        public DownloadModule(MinecraftInstance parent, string description, JArray installProcedure)
         {
+            _parent = parent;
             if (installProcedure != null)
             {
+                string path;
                 foreach (JObject o in installProcedure)
                 {
-                    _installProcedure.Add(new DownloadPath((string)o["downloadLink"], (string)o["destinationPath"]));
+                    path = (string)o["destinationPath"];
+                    path = path.Replace("$InstancePath", parent.InstanceFolder);
+                    _installProcedure.Add(new DownloadPath((string)o["downloadLink"], path));
                 }
             }
             _description = description;
+            pea.ModuleDescription = _description;
         }
 
-        public override string description => _description;
+        protected override string description => _description;
 
         public override void DoWork(string instancePath)
         {
-            //bgw.DoWork += bgw_doWork;
-            //bgw.ProgressChanged += bgw_ProgressChanged;
-            //bgw.WorkerReportsProgress = true;
+            pea.Max = _installProcedure.Count;
             using (WebClient wc = new WebClient())
             {
                 wc.DownloadProgressChanged += DownloadStatusUpdate;
+                wc.DownloadFileCompleted += DownloadComplete;
                 foreach (DownloadPath dp in _installProcedure)
                 {
                     pea.Title = Path.GetFileNameWithoutExtension(dp.DestinationPath);
-                    wc.DownloadFile(dp.DownloadLink, dp.DestinationPath.Replace("$IntancePath", instancePath));
+                    if (!Directory.Exists(Path.GetDirectoryName(dp.DestinationPath)))
+                        Directory.CreateDirectory(Path.GetDirectoryName(dp.DestinationPath));
+                    wc.DownloadFileAsync(new Uri(dp.DownloadLink), dp.DestinationPath);
+                    while (wc.IsBusy) { };
+                    pea.Progress++;
+                    //System.Threading.Thread.Sleep(500);
                 }
             }
         }
 
+        private void DownloadComplete(object sender, AsyncCompletedEventArgs e)
+        {
+            pea.Progress = pea.Progress;
+            OnProgressUpdate(this, pea);
+        }
 
         private void DownloadStatusUpdate(object sender, DownloadProgressChangedEventArgs e)
         {
-            pea.Progress = e.ProgressPercentage;
+            double MbyteReceived = Math.Round((double)e.BytesReceived / 1000000, 2);
+            double MbyteTotal = Math.Round((double)e.TotalBytesToReceive / 1000000, 2);
+            if (oldMByteReceived != 0)
+                pea.Description = MbyteReceived.ToString() + "/" + MbyteTotal.ToString() + "MB @" + Math.Round(MbyteReceived - oldMByteReceived, 2) + "MB/s";
+            else
+                pea.Description = MbyteReceived.ToString() + "/" + MbyteTotal.ToString() + "MB @N/A MB/s";
+            oldMByteReceived = MbyteReceived;
             OnProgressUpdate(this, pea);
         }
     }
@@ -100,6 +137,32 @@ namespace Lanceur_Modder_v2
 
         public string DownloadLink { get => downloadLink; }
         public string DestinationPath { get => destinationPath; }
+    }
+
+    public class MinecraftInstallationModule : InstallationModule
+    {
+        private MinecraftInstance _parent;
+        protected override MinecraftInstance parent => _parent;
+
+        private string _description;
+        protected override string description => _description;
+
+        private string _mcversion;
+
+        private ProgressEventArgs pea = new ProgressEventArgs();
+
+        public MinecraftInstallationModule(MinecraftInstance parent, string mcversion, string description)
+        {
+            _parent = parent;
+            _mcversion = mcversion;
+            _description = description;
+            pea.ModuleDescription = _description;
+        }
+
+        public override void DoWork(string instancePath)
+        {
+            Minecraft.Initialize(instancePath);
+        }
     }
 
     #endregion

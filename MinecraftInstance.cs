@@ -21,6 +21,8 @@ namespace Lanceur_Modder_v2
         // Track whether Dispose has been called.
         private bool disposed = false;
 
+        private const string InstanceFolderName = "Instances";
+
         private string _mainProgressText;
         private int _progressBarValue;
         private int _progressBarMaxValue;
@@ -49,6 +51,8 @@ namespace Lanceur_Modder_v2
             _MCVersion = MCVersion;
             _instanceName = instanceName;
             _instanceFolder = instanceFolder;
+            if (_instanceFolder != null)
+                _instanceFolder = InstanceFolderName + "\\" + _instanceFolder;
 
             if (actionObject != null)
             {
@@ -57,13 +61,20 @@ namespace Lanceur_Modder_v2
                     switch ((string)o["action"])
                     {
                         case "download":
-                            _installProcedure.Add(new DownloadModule((string)o["description"], (JArray)o["downloadLinks"]));
+                            _installProcedure.Add(new DownloadModule(this, (string)o["description"], (JArray)o["downloadLinks"]));
+                            break;
+                        case "installMinecraft":
+                            _installProcedure.Add(new MinecraftInstallationModule(this, _MCVersion, _Description));
+                            break;
+                        default:
+                            //warning sur les logs à ajouter
                             break;
                     }
                 }
             }
 
             bgw.DoWork += Bgw_DoWork;
+            bgw.RunWorkerCompleted += Bgw_Finished;
 
             foreach (InstallationModule im in _installProcedure)
             {
@@ -71,6 +82,7 @@ namespace Lanceur_Modder_v2
             }
         }
 
+        
         protected virtual void OnPropertyChanged(string propertyName)
         {
             var handler = PropertyChanged;
@@ -83,7 +95,7 @@ namespace Lanceur_Modder_v2
         public string Description { get => _Description; }
         public string MCVersion { get => _MCVersion; }
         public string InstanceName { get => _instanceName; }
-        public string InstanceFolder { get => _instanceFolder; }
+        public string InstanceFolder { get => _instanceFolder; set => _instanceFolder = value; }
 
         public ICommand InstallCommand
         {
@@ -168,27 +180,41 @@ namespace Lanceur_Modder_v2
             CurrentlyDownloading = true;
             ButtonInstallText = "Installation...";
             MainProgressText = "Installation";
-            DetailProgressText = "ioyuaezàiçuzeuyvnzeruzaevçprzuenvrç_vunzaçvrzrv";
+            bgw.RunWorkerAsync();
             //OnUpdateScreen(this);
         }
 
         #region backgroundworker
 
+        private int numberOfOperation = 0;
+        private int currentOperation = 1;
+
         private void Bgw_DoWork(object sender, DoWorkEventArgs e)
         {
+            numberOfOperation = _installProcedure.Count;
             foreach (InstallationModule im in _installProcedure)
             {
+                im.OnProgressUpdateEventHandler += Bgw_ProgressUpdate;
                 im.DoWork(_instanceFolder);
+                im.OnProgressUpdateEventHandler -= Bgw_ProgressUpdate;
+                currentOperation++;
             }
         }
 
         private void Bgw_ProgressUpdate(object sender, ProgressEventArgs e)
         {
-            ProgressBarMaxValue = 100;
-            ProgressBarValue = (int)e.Progress;
-            DetailProgressText = "ioyuaezàiçuzeuyvnzeruzaevçprzuenvrç_vunzaçvrzrv";
-            //OnUpdateScreen(this);
+            ProgressBarMaxValue = e.Max;
+            ProgressBarValue = e.Progress;
+            DetailProgressText = e.Description;
+            MainProgressText = "Installation " + e.ModuleDescription + " [" + currentOperation + "/" + numberOfOperation + "]: " + e.Title;
         }
+
+        private void Bgw_Finished(object sender, RunWorkerCompletedEventArgs e)
+        {
+            CurrentlyDownloading = false;
+            ButtonInstallText = "Jouer";
+        }
+
 
         // Implement IDisposable.
         // Do not make this method virtual.
