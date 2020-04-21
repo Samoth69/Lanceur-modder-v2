@@ -1,0 +1,107 @@
+﻿<Window x:Class="Lanceur_Modder_v2.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Lanceur_Modder_v2"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+    <DockPanel>
+        <ToolBarPanel DockPanel.Dock="Top">
+            <ToolBar ToolBarTray.IsLocked="True" Loaded="ToolBar_Loaded" Background="LightGray">
+                <Menu ToolBar.OverflowMode="Never">
+                    <MenuItem Header="Menu">
+                        <MenuItem Header="MenuItem1"/>
+                    </MenuItem>
+                </Menu>
+            </ToolBar>
+        </ToolBarPanel>
+        <Grid DockPanel.Dock="Bottom">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="25"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="100"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="60"/>
+                    <ColumnDefinition Width="150"/>
+                    <ColumnDefinition Width="5"/>
+                    <ColumnDefinition Width="200"/>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Click="Refresh_Button_Click">
+                    <StackPanel>
+                        <Image Source="ImgRefresh"/>
+                    </StackPanel>
+                </Button>
+                <Label Grid.Column="2" Content="Trier par" HorizontalAlignment="Right"/>
+                <ComboBox Grid.Column="3"/>
+                <TextBox Grid.Column="5" VerticalAlignment="Stretch" VerticalContentAlignment="Center">
+                    <TextBox.Style>
+                        <Style TargetType="TextBox" xmlns:sys="clr-namespace:System;assembly=mscorlib">
+                            <Style.Resources>
+                                <VisualBrush x:Key="CueBannerBrush" AlignmentX="Left" AlignmentY="Center" Stretch="None">
+                                    <VisualBrush.Visual>
+                                        <Label Content="Rechercher" Foreground="Gray" />
+                                    </VisualBrush.Visual>
+                                </VisualBrush>
+                            </Style.Resources>
+                            <Style.Triggers>
+                                <Trigger Property="Text" Value="{x:Static sys:String.Empty}">
+                                    <Setter Property="Background" Value="{StaticResource CueBannerBrush}" />
+                                </Trigger>
+                                <Trigger Property="Text" Value="{x:Null}">
+                                    <Setter Property="Background" Value="{StaticResource CueBannerBrush}" />
+                                </Trigger>
+                                <Trigger Property="IsKeyboardFocused" Value="True">
+                                    <Setter Property="Background" Value="White" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBox.Style>
+                </TextBox>
+            </Grid>
+            <ListView x:Name="LVPacksList" Grid.Row="1">
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="Focusable" Value="False"/>
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Vertical">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                                    <Image Source="{Binding Image}" Height="128" Width="128"/>
+                                    <StackPanel Margin="10,0,0,0">
+                                        <TextBlock Text="{Binding Name}" FontSize="25" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Margin="0"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                <Grid DockPanel.Dock="Right">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="60"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="22"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <Button Grid.Column="1" Grid.Row="1" Content="Installer" Name="test" Command="{Binding Path=InstallCommand}"/>
+                                </Grid>
+                            </DockPanel>
+                            <StackPanel Visibility="{Binding CurrentlyDownloading}" Orientation="Vertical">
+                                <TextBlock FontSize="25" FontWeight="Bold" Text="{Binding MainProgressText}"/>
+                                <ProgressBar Value="{Binding ProgressBarValue}" Maximum="{Binding ProgressBarMaxValue}" Height="25" Width="200"/>
+                                <TextBlock Text="{Binding DetailProgressText}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Grid>
+    </DockPanel>
+</Window>
