@@ -6,6 +6,8 @@ using System.Windows.Controls;
 using System.Net;
 using System.IO;
 using Newtonsoft.Json.Linq;
+using System.Collections.ObjectModel;
+using System.Windows.Data;
 
 namespace Lanceur_Modder_v2
 {
@@ -14,13 +16,17 @@ namespace Lanceur_Modder_v2
     /// </summary>
     public partial class MainWindow : Window
     {
-        List<MinecraftInstance> PackList = new List<MinecraftInstance>();
+        private readonly object _sync = new object();
+        public ObservableCollection<MinecraftInstance> PackList { get; } = new ObservableCollection<MinecraftInstance>();
 
         public MainWindow()
         {
             //PackList.Add(new MinecraftInstance("Test", "Description\npozeriçuazeyriouyroi", "image.png"));
             //PackList.Add(new MinecraftInstance("BugDroid", "Voici notre amis 'BugDroid', promis il mord pas", "android.png"));
             //PackList[0].Image.UriSource = new Uri(@"image.png", UriKind.RelativeOrAbsolute);
+            InitializeComponent();
+            this.DataContext = this;
+            BindingOperations.EnableCollectionSynchronization(PackList, _sync);
 
             using (WebClient wc = new WebClient())
             {
@@ -32,16 +38,6 @@ namespace Lanceur_Modder_v2
             {
                 PackList.Add(new MinecraftInstance((string)s["name"], (string)s["description"], (string)s["image"], (string)s["MCVersion"], (string)s["instanceName"], (string)s["instanceFolder"], (JArray)s["installProcedure"]));
             }
-
-            InitializeComponent();
-
-            LVPacksList.ItemsSource = PackList;
-            MinecraftInstance.OnUpdateScreen += UpdateScreen;
-        }
-
-        private void UpdateScreen(object sender)
-        {
-            
         }
 
         private void ToolBar_Loaded(object sender, RoutedEventArgs e)

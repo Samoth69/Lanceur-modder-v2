@@ -8,7 +8,7 @@ using System.Windows.Media.Imaging;
 
 namespace Lanceur_Modder_v2
 {
-    public class MinecraftInstance : IDisposable
+    public class MinecraftInstance : IDisposable, INotifyPropertyChanged
     {
         private string _name;
         private BitmapImage _Image;
@@ -25,12 +25,15 @@ namespace Lanceur_Modder_v2
         private int _progressBarValue;
         private int _progressBarMaxValue;
         private string _detailProgressText;
-        private Visibility _currentlyDownloading = Visibility.Visible;
+        //private Visibility _currentlyDownloading = Visibility.Visible;
+        private bool _currentlyDownloading = false;
+        private string _buttonInstallText = "Installer";
 
         private ICommand _installCommand;
 
-        public delegate void UpdateScreen(object sender);
-        public static event UpdateScreen OnUpdateScreen;
+        //public delegate void UpdateScreen(object sender);
+        //public static event UpdateScreen OnUpdateScreen;
+        public event PropertyChangedEventHandler PropertyChanged;
 
         public MinecraftInstance(string Name, string Description, string ImagePath, string MCVersion, string instanceName, string instanceFolder, JArray actionObject)
         {
@@ -66,8 +69,13 @@ namespace Lanceur_Modder_v2
             {
                 im.OnProgressUpdateEventHandler += Bgw_ProgressUpdate;
             }
+        }
 
-            CurrentlyDownloading = Visibility.Hidden;
+        protected virtual void OnPropertyChanged(string propertyName)
+        {
+            var handler = PropertyChanged;
+            if (handler != null)
+                handler(this, new PropertyChangedEventArgs(propertyName));
         }
 
         public string Name { get => _name; }
@@ -92,14 +100,60 @@ namespace Lanceur_Modder_v2
             }
         }
 
-        public string MainProgressText { get => _mainProgressText; set => _mainProgressText = value; }
-        public int ProgressBarValue { get => _progressBarValue; set => _progressBarValue = value; }
-        public int ProgressBarMaxValue { get => _progressBarMaxValue; set => _progressBarMaxValue = value; }
-        public string DetailProgressText { get => _detailProgressText; set => _detailProgressText = value; }
-        public Visibility CurrentlyDownloading { get => _currentlyDownloading; set
+        public string MainProgressText { 
+            get => _mainProgressText; 
+            set 
+            { 
+                _mainProgressText = value;
+                OnPropertyChanged(nameof(MainProgressText));
+            } 
+        }
+        public int ProgressBarValue
+        {
+            get => _progressBarValue;
+            set
+            {
+                _progressBarValue = value;
+                OnPropertyChanged(nameof(ProgressBarValue));
+            }
+        }
+        public int ProgressBarMaxValue { 
+            get => _progressBarMaxValue;
+            set
+            {
+                _progressBarMaxValue = value;
+                OnPropertyChanged(nameof(ProgressBarMaxValue));
+            }
+        }
+        public string DetailProgressText { 
+            get => _detailProgressText;
+            set
+            {
+                _detailProgressText = value;
+                OnPropertyChanged(nameof(DetailProgressText));
+            }
+        }
+        public bool CurrentlyDownloading
+        {
+            get => _currentlyDownloading;
+            set
             {
                 _currentlyDownloading = value;
-            } }
+                OnPropertyChanged(nameof(CurrentlyDownloading));
+                OnPropertyChanged(nameof(CurrentlyDownloadingReversed));
+            }
+        }
+
+        public bool CurrentlyDownloadingReversed { get => !_currentlyDownloading; }
+        
+        public string ButtonInstallText { 
+            get => _buttonInstallText;
+            set 
+            { 
+                _buttonInstallText = value;
+                OnPropertyChanged(nameof(ButtonInstallText));
+            } 
+        }
 
         private bool CanSave()
         {
@@ -111,12 +165,11 @@ namespace Lanceur_Modder_v2
         {
             // Save command execution logic
             //MessageBox.Show(_name);
-            CurrentlyDownloading = Visibility.Visible;
-            MainProgressText = "Coucou";
-            ProgressBarMaxValue = 100;
-            ProgressBarValue = 50;
+            CurrentlyDownloading = true;
+            ButtonInstallText = "Installation...";
+            MainProgressText = "Installation";
             DetailProgressText = "ioyuaezàiçuzeuyvnzeruzaevçprzuenvrç_vunzaçvrzrv";
-            OnUpdateScreen(this);
+            //OnUpdateScreen(this);
         }
 
         #region backgroundworker
@@ -131,11 +184,10 @@ namespace Lanceur_Modder_v2
 
         private void Bgw_ProgressUpdate(object sender, ProgressEventArgs e)
         {
-            MainProgressText = "Coucou";
             ProgressBarMaxValue = 100;
             ProgressBarValue = (int)e.Progress;
             DetailProgressText = "ioyuaezàiçuzeuyvnzeruzaevçprzuenvrç_vunzaçvrzrv";
-            OnUpdateScreen(this);
+            //OnUpdateScreen(this);
         }
 
         // Implement IDisposable.

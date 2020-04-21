@@ -75,6 +75,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="InverseBooleanConverter.cs" />
     <Compile Include="MinecraftInstance.cs" />
     <Compile Include="Modules.cs" />
     <Compile Include="RelayCommand.cs" />
