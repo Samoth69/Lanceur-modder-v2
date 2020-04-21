@@ -59,15 +59,5 @@ namespace Lanceur_Modder_v2.Properties {
                 resourceCulture = value;
             }
         }
-        
-        /// <summary>
-        ///   Recherche une ressource localisée de type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap ImgRefresh {
-            get {
-                object obj = ResourceManager.GetObject("ImgRefresh", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
     }
 }
