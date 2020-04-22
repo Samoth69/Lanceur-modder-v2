@@ -5,6 +5,13 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
+using System.IO;
+using System.Security;
+using CmlLib.Core;
+using System.Threading;
+using System.Diagnostics;
+using CmlLib;
+using System.Runtime.InteropServices;
 
 namespace Lanceur_Modder_v2
 {
@@ -14,6 +21,7 @@ namespace Lanceur_Modder_v2
         private BitmapImage _Image;
         private string _Description;
         private string _MCVersion;
+        private string _ForgeVersion;
         private string _instanceName;
         private string _instanceFolder;
         private List<InstallationModule> _installProcedure = new List<InstallationModule>();
@@ -27,17 +35,16 @@ namespace Lanceur_Modder_v2
         private int _progressBarValue;
         private int _progressBarMaxValue;
         private string _detailProgressText;
-        //private Visibility _currentlyDownloading = Visibility.Visible;
         private bool _currentlyDownloading = false;
         private string _buttonInstallText = "Installer";
 
         private ICommand _installCommand;
 
-        //public delegate void UpdateScreen(object sender);
-        //public static event UpdateScreen OnUpdateScreen;
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public MinecraftInstance(string Name, string Description, string ImagePath, string MCVersion, string instanceName, string instanceFolder, JArray actionObject)
+        private bool _installer = false;
+
+        public MinecraftInstance(string Name, string Description, string ImagePath, string MCVersion, string ForgeVersion, string instanceName, string instanceFolder, JArray actionObject)
         {
             _name = Name;
             _Description = Description;
@@ -49,6 +56,7 @@ namespace Lanceur_Modder_v2
             _Image.EndInit();
 
             _MCVersion = MCVersion;
+            _ForgeVersion = ForgeVersion;
             _instanceName = instanceName;
             _instanceFolder = instanceFolder;
             if (_instanceFolder != null)
@@ -80,9 +88,25 @@ namespace Lanceur_Modder_v2
             {
                 im.OnProgressUpdateEventHandler += Bgw_ProgressUpdate;
             }
+
+            if (File.Exists(_instanceFolder + "\\packInfo.json"))
+            {
+                string t = File.ReadAllText(_instanceFolder + "\\packInfo.json");
+                if (t == "0")
+                    _installer = false;
+                else if (t == "1")
+                {
+                    _installer = true;
+                    ButtonInstallText = "Jouer";
+                }
+            }
+            else
+            {
+                _installer = false;
+            }
         }
 
-        
+
         protected virtual void OnPropertyChanged(string propertyName)
         {
             var handler = PropertyChanged;
@@ -111,6 +135,8 @@ namespace Lanceur_Modder_v2
                 return _installCommand;
             }
         }
+
+        private bool CanSave() { return true; }
 
         public string MainProgressText { 
             get => _mainProgressText; 
@@ -167,21 +193,35 @@ namespace Lanceur_Modder_v2
             } 
         }
 
-        private bool CanSave()
-        {
-            // Verify command can be executed here
-            return true;
-        }
+        public bool Installer { get => _installer; }
 
         private void InstallButtonClick()
         {
-            // Save command execution logic
-            //MessageBox.Show(_name);
-            CurrentlyDownloading = true;
-            ButtonInstallText = "Installation...";
-            MainProgressText = "Installation";
             bgw.RunWorkerAsync();
-            //OnUpdateScreen(this);
+        }
+
+        private void Launcher_ProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            ProgressBarValue = e.ProgressPercentage;
+        }
+
+        private void Launcher_FileChanged(DownloadFileChangedEventArgs e)
+        {
+            DetailProgressText = "[" + e.ProgressedFileCount + "/" + e.TotalFileCount + "] " + e.FileName;
+        }
+
+        private String SecureStringToString(SecureString value)
+        {
+            IntPtr valuePtr = IntPtr.Zero;
+            try
+            {
+                valuePtr = Marshal.SecureStringToGlobalAllocUnicode(value);
+                return Marshal.PtrToStringUni(valuePtr);
+            }
+            finally
+            {
+                Marshal.ZeroFreeGlobalAllocUnicode(valuePtr);
+            }
         }
 
         #region backgroundworker
@@ -191,14 +231,76 @@ namespace Lanceur_Modder_v2
 
         private void Bgw_DoWork(object sender, DoWorkEventArgs e)
         {
-            numberOfOperation = _installProcedure.Count;
-            foreach (InstallationModule im in _installProcedure)
+            CurrentlyDownloading = true;
+            if (!Installer)
             {
-                im.OnProgressUpdateEventHandler += Bgw_ProgressUpdate;
-                im.DoWork(_instanceFolder);
-                im.OnProgressUpdateEventHandler -= Bgw_ProgressUpdate;
-                currentOperation++;
+                ButtonInstallText = "Installation...";
+                MainProgressText = "Installation";
+                numberOfOperation = _installProcedure.Count;
+                foreach (InstallationModule im in _installProcedure)
+                {
+                    im.OnProgressUpdateEventHandler += Bgw_ProgressUpdate;
+                    im.DoWork(_instanceFolder);
+                    im.OnProgressUpdateEventHandler -= Bgw_ProgressUpdate;
+                    currentOperation++;
+                }
             }
+            else
+            {
+                MinecraftLoginWindow MLW;
+                CMLauncher launcher = new CMLauncher(InstanceFolder);
+
+                launcher.FileChanged += Launcher_FileChanged;
+                launcher.ProgressChanged += Launcher_ProgressChanged;
+                ProgressBarMaxValue = 100;
+                MainProgressText = "Démarrage...";
+
+                MLogin ml = new MLogin();
+                MSession session;
+                bool dialogResult = true;
+
+                session = ml.TryAutoLogin();
+                if (session.Result != MLoginResult.Success)
+                {
+                    do
+                    {
+                        MLW = new MinecraftLoginWindow();
+                        dialogResult = (bool)MLW.ShowDialog();
+                        SecureString ss = MLW.Passwd;
+
+                        session = ml.Authenticate(MLW.Email, SecureStringToString(ss));
+                        ss.Dispose();
+                        if (session.Result != MLoginResult.Success)
+                        {
+                            MessageBox.Show("Erreur d'authentifcation: " + session.Result.ToString() + "\n" + session.Message);
+                        }
+                    } while (session.Result != MLoginResult.Success && dialogResult);
+                }
+
+                if (dialogResult)
+                {
+                    var launchOption = new MLaunchOption()
+                    {
+                        MaximumRamMb = 2048,
+                        Session = session
+                    };
+
+                    var th = new Thread(() =>
+                    {
+                        Process mc = new Process();
+
+                        mc = launcher.CreateProcess(_MCVersion, _ForgeVersion, launchOption);
+                        mc.StartInfo.UseShellExecute = false;
+
+                        mc.Start();
+                    });
+                    th.Start();
+
+                    while (th.IsAlive) { Thread.Sleep(1); }
+
+                }
+            }
+            CurrentlyDownloading = false;
         }
 
         private void Bgw_ProgressUpdate(object sender, ProgressEventArgs e)
@@ -212,6 +314,8 @@ namespace Lanceur_Modder_v2
         private void Bgw_Finished(object sender, RunWorkerCompletedEventArgs e)
         {
             CurrentlyDownloading = false;
+            _installer = true;
+            File.WriteAllText(_instanceFolder + "\\packInfo.json", "1");
             ButtonInstallText = "Jouer";
         }
 

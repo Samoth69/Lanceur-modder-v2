@@ -4,7 +4,8 @@ using System.Collections.Generic;
 using System.Net;
 using System.IO;
 using System.ComponentModel;
-using CmlLib.Launcher;
+using CmlLib;
+using CmlLib.Core;
 
 namespace Lanceur_Modder_v2
 {
@@ -69,13 +70,13 @@ namespace Lanceur_Modder_v2
         public DownloadModule(MinecraftInstance parent, string description, JArray installProcedure)
         {
             _parent = parent;
-            if (installProcedure != null)
+            if (installProcedure != null && _parent != null)
             {
                 string path;
                 foreach (JObject o in installProcedure)
                 {
                     path = (string)o["destinationPath"];
-                    path = path.Replace("$InstancePath", parent.InstanceFolder);
+                    path = path.Replace("$InstancePath", _parent.InstanceFolder);
                     _installProcedure.Add(new DownloadPath((string)o["downloadLink"], path));
                 }
             }
@@ -157,11 +158,29 @@ namespace Lanceur_Modder_v2
             _mcversion = mcversion;
             _description = description;
             pea.ModuleDescription = _description;
+            pea.Max = 100;
         }
 
         public override void DoWork(string instancePath)
         {
-            Minecraft.Initialize(instancePath);
+            CMLauncher Launcher = new CMLauncher(instancePath);
+            Launcher.FileChanged += Downloader_ChangeFile;
+            Launcher.ProgressChanged += Downloader_ChangeProgress;
+            Launcher.UpdateProfiles();
+        }
+
+        private void Downloader_ChangeProgress(object sender, System.ComponentModel.ProgressChangedEventArgs e)
+        {
+            pea.Progress = e.ProgressPercentage;
+            OnProgressUpdate(sender, pea);
+        }
+
+        private void Downloader_ChangeFile(DownloadFileChangedEventArgs e)
+        {
+            //Console.WriteLine("Now Downloading : {0} - {1} ({2}/{3})", e.FileKind, e.FileName, e.ProgressedFileCount, e.TotalFileCount);
+            pea.Title = e.FileKind.ToString();
+            pea.Description = "[" + e.ProgressedFileCount + "/" + e.TotalFileCount + "] " + e.FileName;
+            OnProgressUpdate(this, pea); 
         }
     }
 

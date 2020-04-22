@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Net;
@@ -20,9 +19,6 @@ namespace Lanceur_Modder_v2
 
         public MainWindow()
         {
-            //PackList.Add(new MinecraftInstance("Test", "Description\npozeriçuazeyriouyroi", "image.png"));
-            //PackList.Add(new MinecraftInstance("BugDroid", "Voici notre amis 'BugDroid', promis il mord pas", "android.png"));
-            //PackList[0].Image.UriSource = new Uri(@"image.png", UriKind.RelativeOrAbsolute);
             InitializeComponent();
             this.DataContext = this;
             BindingOperations.EnableCollectionSynchronization(PackList, _sync);
@@ -33,10 +29,18 @@ namespace Lanceur_Modder_v2
             }
             JObject o = JObject.Parse(File.ReadAllText("packs.json"));
 
-            foreach (JObject s in o["instances"])
+            if ((string)o["version"] == "1.0")
             {
-                PackList.Add(new MinecraftInstance((string)s["name"], (string)s["description"], (string)s["image"], (string)s["MCVersion"], (string)s["instanceName"], (string)s["instanceFolder"], (JArray)s["installProcedure"]));
+                foreach (JObject s in o["instances"])
+                {
+                    PackList.Add(new MinecraftInstance((string)s["name"], (string)s["description"], (string)s["image"], (string)s["MCVersion"], (string)s["ForgeVersion"], (string)s["instanceName"], (string)s["instanceFolder"], (JArray)s["installProcedure"]));
+                }
             }
+            else
+            {
+                //version du fichier non reconnu, mise à jour du logiciel potentiellement disponible
+            }
+            
         }
 
         private void ToolBar_Loaded(object sender, RoutedEventArgs e)
@@ -56,11 +60,7 @@ namespace Lanceur_Modder_v2
 
         private void Refresh_Button_Click(object sender, RoutedEventArgs rea)
         {
-            MinecraftLoginWindow MLW = new MinecraftLoginWindow();
-            if (MLW.ShowDialog() == true)
-            {
-                MessageBox.Show("yes");
-            }
+
         }
     }
 }

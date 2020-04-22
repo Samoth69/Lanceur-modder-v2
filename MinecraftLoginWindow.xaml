@@ -5,10 +5,45 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Lanceur_Modder_v2"
         mc:Ignorable="d"
-        Title="MinecraftLoginWindow" Height="200" Width="500" MinHeight="200" MaxHeight="200" MinWidth="500" MaxWidth="500">
+        Title="MinecraftLoginWindow" Height="220" Width="500" MinHeight="220" MaxHeight="220" MinWidth="500" MaxWidth="500" WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <Style x:Key="{x:Type PasswordBox}" TargetType="{x:Type PasswordBox}">
+            <Setter Property="local:PasswordBoxMonitor.IsMonitoring" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type PasswordBox}">
+                        <Border Name="Bd" Background="{TemplateBinding Background}" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}" SnapsToDevicePixels="true">
+                            <Grid>
+                                <ScrollViewer x:Name="PART_ContentHost" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                <TextBlock Text="Mot de passe" Margin="4, 2, 0, 0" Foreground="Gray" Visibility="Collapsed" Name="txtPrompt"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="false">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource {x:Static SystemColors.ControlBrushKey}}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"/>
+                            </Trigger>
+                            <Trigger Property="local:PasswordBoxMonitor.PasswordLength" Value="0">
+                                <Setter Property="Visibility" TargetName="txtPrompt" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
     <Grid>
-        <Label Content="Veuillez entrer vos identifiants minecraft pour pouvoir lancer le jeu" HorizontalAlignment="Left" Margin="10,24,0,0" VerticalAlignment="Top" Width="365"/>
-        <TextBox Margin="10,69" x:Name="TB_Email" TextChanged="Check_Text" VerticalContentAlignment="Center">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="80"/>
+            <RowDefinition Height="22"/>
+            <RowDefinition Height="5"/>
+            <RowDefinition Height="22"/>
+            <RowDefinition Height="5"/>
+            <RowDefinition Height="20"/>
+            <RowDefinition Height="30"/>
+        </Grid.RowDefinitions>
+        <Label Grid.Row="0" Content="Veuillez entrer vos identifiants minecraft pour pouvoir lancer le jeu" HorizontalAlignment="Left" Margin="10,24,0,0" VerticalAlignment="Top" Width="365"/>
+        <TextBox Grid.Row="1" Margin="5,0,5,0" x:Name="TB_Email" TextChanged="Check_Text_Username" VerticalContentAlignment="Center">
             <TextBox.Style>
                 <Style TargetType="TextBox" xmlns:sys="clr-namespace:System;assembly=mscorlib">
                     <Style.Resources>
@@ -32,14 +67,17 @@
                 </Style>
             </TextBox.Style>
         </TextBox>
-        <PasswordBox  Margin="10,105,10,35" x:Name="TB_MDP" PasswordChanged="Check_Text" VerticalContentAlignment="Center">
-            <PasswordBox.Style>
-                <Style TargetType="PasswordBox" xmlns:sys="clr-namespace:System;assembly=mscorlib">
-                    <!--<Setter Property="local:WaterMarkTextHelper.Water"-->
-                </Style>
-            </PasswordBox.Style>
-        </PasswordBox>
-        <Button x:Name="BT_Cancel" Click="BT_Cancel_Click" IsCancel="True" Content="Annuler" HorizontalAlignment="Left" Margin="407,139,0,0" VerticalAlignment="Top" Width="75"/>
-        <Button x:Name="BT_OK" Click="BT_OK_Click" IsDefault="True" IsEnabled="false" Content="OK" HorizontalAlignment="Left" Margin="327,139,0,0" VerticalAlignment="Top" Width="75"/>
+        <PasswordBox Grid.Row="3"  Margin="5,0,5,0" x:Name="TB_MDP" PasswordChanged="TB_MDP_PasswordChanged" VerticalContentAlignment="Center"/>
+        <CheckBox Grid.Row="5" Content="Ce souvenir des identifiants" Margin="5,0,0,0" x:Name="SavePassword"/>
+        <Grid Grid.Row="6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="80"/>
+                <ColumnDefinition Width="80"/>
+            </Grid.ColumnDefinitions>
+            <Button Grid.Column="2" x:Name="BT_Cancel" Click="BT_Cancel_Click" IsCancel="True" Content="Annuler" HorizontalAlignment="Center" VerticalAlignment="Center" Width="75"/>
+            <Button Grid.Column="1" x:Name="BT_OK" Click="BT_OK_Click" IsDefault="True" IsEnabled="false" Content="OK" HorizontalAlignment="Center" VerticalAlignment="Center" Width="75"/>
+        </Grid>
+        
     </Grid>
 </Window>

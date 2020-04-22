@@ -43,7 +43,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="CmlLib, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\CustomMinecraftLauncher.1.1.1\lib\net45\CmlLib.dll</HintPath>
+      <HintPath>packages\CmlLib.Core.0.2.0\lib\net45\CmlLib.dll</HintPath>
     </Reference>
     <Reference Include="DotNetZip, Version=1.13.4.0, Culture=neutral, PublicKeyToken=6583c7c814667745, processorArchitecture=MSIL">
       <HintPath>packages\DotNetZip.1.13.4\lib\net40\DotNetZip.dll</HintPath>
@@ -85,6 +85,7 @@
     </Compile>
     <Compile Include="Modules.cs" />
     <Compile Include="RelayCommand.cs" />
+    <Compile Include="WaterMarkTextHelper.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
