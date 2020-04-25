@@ -40,7 +40,17 @@ namespace Lanceur_Modder_v2
 
         private ICommand _installCommand;
 
+        //event pour update l'IHM
         public event PropertyChangedEventHandler PropertyChanged;
+
+        //event pour mettre à jour le status de téléchargement
+        public delegate void ProgressEventHandler(object o, ProgressEventArgs pa);
+        public event ProgressEventHandler OnProgressUpdateEventHandler;
+
+        protected void OnProgressUpdate(object sender, ProgressEventArgs pea)
+        {
+            OnProgressUpdateEventHandler(sender, pea);
+        }
 
         private bool _installer = false;
 
@@ -104,8 +114,9 @@ namespace Lanceur_Modder_v2
             {
                 _installer = false;
             }
-        }
 
+            OnProgressUpdateEventHandler += MinecraftInstance_OnProgressUpdateEventHandler;
+        }
 
         protected virtual void OnPropertyChanged(string propertyName)
         {
@@ -176,6 +187,7 @@ namespace Lanceur_Modder_v2
             get => _currentlyDownloading;
             set
             {
+                
                 _currentlyDownloading = value;
                 OnPropertyChanged(nameof(CurrentlyDownloading));
                 OnPropertyChanged(nameof(CurrentlyDownloadingReversed));
@@ -195,6 +207,8 @@ namespace Lanceur_Modder_v2
 
         public bool Installer { get => _installer; }
 
+        private ProgressEventArgs pea = new ProgressEventArgs();
+
         private void InstallButtonClick()
         {
             bgw.RunWorkerAsync();
@@ -202,12 +216,20 @@ namespace Lanceur_Modder_v2
 
         private void Launcher_ProgressChanged(object sender, ProgressChangedEventArgs e)
         {
-            ProgressBarValue = e.ProgressPercentage;
+            pea.Progress = e.ProgressPercentage;
+            OnProgressUpdate(this, pea);
         }
 
         private void Launcher_FileChanged(DownloadFileChangedEventArgs e)
         {
-            DetailProgressText = "[" + e.ProgressedFileCount + "/" + e.TotalFileCount + "] " + e.FileName;
+            pea.Title = "[" + e.ProgressedFileCount + "/" + e.TotalFileCount + "] " + e.FileName;
+            OnProgressUpdate(this, pea);
+        }
+
+        private void MinecraftInstance_OnProgressUpdateEventHandler(object o, ProgressEventArgs pa)
+        {
+            DetailProgressText = "(" + pa.Progress + "%) " + pa.Title;
+            ProgressBarValue = pa.Progress;
         }
 
         private String SecureStringToString(SecureString value)
@@ -256,25 +278,31 @@ namespace Lanceur_Modder_v2
                 MainProgressText = "Démarrage...";
 
                 MLogin ml = new MLogin();
-                MSession session;
+                MSession session = new MSession();
                 bool dialogResult = true;
 
                 session = ml.TryAutoLogin();
-                if (session.Result != MLoginResult.Success)
+                if (string.IsNullOrEmpty(session.AccessToken))
                 {
                     do
                     {
-                        MLW = new MinecraftLoginWindow();
-                        dialogResult = (bool)MLW.ShowDialog();
-                        SecureString ss = MLW.Passwd;
+                        Application.Current.Dispatcher.Invoke((Action)delegate{
+                            MLW = new MinecraftLoginWindow();
+                            dialogResult = (bool)MLW.ShowDialog();
+                            if (dialogResult)
+                            {
+                                SecureString ss = MLW.Passwd;
 
-                        session = ml.Authenticate(MLW.Email, SecureStringToString(ss));
-                        ss.Dispose();
-                        if (session.Result != MLoginResult.Success)
+                                session = ml.Authenticate(MLW.Email, SecureStringToString(ss));
+                                ss.Dispose();
+                            }
+                        });
+                        
+                        if (dialogResult && (session != null && session.Result != MLoginResult.Success))
                         {
                             MessageBox.Show("Erreur d'authentifcation: " + session.Result.ToString() + "\n" + session.Message);
                         }
-                    } while (session.Result != MLoginResult.Success && dialogResult);
+                    } while (dialogResult && session.Result != MLoginResult.Success);
                 }
 
                 if (dialogResult)
@@ -307,7 +335,7 @@ namespace Lanceur_Modder_v2
         {
             ProgressBarMaxValue = e.Max;
             ProgressBarValue = e.Progress;
-            DetailProgressText = e.Description;
+            DetailProgressText = "(" + e.Progress + "%) " + e.Description;
             MainProgressText = "Installation " + e.ModuleDescription + " [" + currentOperation + "/" + numberOfOperation + "]: " + e.Title;
         }
 

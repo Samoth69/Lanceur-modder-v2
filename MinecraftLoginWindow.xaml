@@ -68,7 +68,7 @@
             </TextBox.Style>
         </TextBox>
         <PasswordBox Grid.Row="3"  Margin="5,0,5,0" x:Name="TB_MDP" PasswordChanged="TB_MDP_PasswordChanged" VerticalContentAlignment="Center"/>
-        <CheckBox Grid.Row="5" Content="Ce souvenir des identifiants" Margin="5,0,0,0" x:Name="SavePassword"/>
+        <CheckBox Grid.Row="5" Content="Ce souvenir des identifiants (non implémenté)" Margin="5,0,0,0" x:Name="SavePassword" IsEnabled="False"/>
         <Grid Grid.Row="6">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
